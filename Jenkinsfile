@@ -84,5 +84,34 @@ pipeline {
                 }
             }
         }
+
+        stage('Apply') {
+            when {
+                expression {
+                    JOB_NAME == "build-eks-environment" && (params.Action == null || params.Action == "apply")
+                }
+            }
+            steps {
+                script {
+                    maskPasswords() {
+                        sh (
+                            script: 'docker run --rm' + common_envs + ' \
+                                -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                                -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                                -w /apps/eks-environments/${Env} \
+                                devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
+                                terragrunt apply ' + tf_targets + '-auto-approve -no-color' + common_tg_cli_args,
+                            returnStatus: true
+                        )
+                    }
+                }
+            }
+        
+        stage('Destroy') {
+            when {
+                expression {
+                    JOB_NAME == "build-eks-environment" && params.Destroy == true
+                }
+            }
     }
 }
