@@ -28,7 +28,7 @@ def common_tg_cli_args = " --iam-assume-role arn:aws:iam::${aws_account_id}:role
 pipeline {
     agent any
     environment {
-           AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
         AWS_REGION = 'us-east-2'
     }
@@ -84,7 +84,6 @@ pipeline {
                 }
             }
         }
-
         stage('Apply') {
             when {
                 expression {
@@ -106,12 +105,40 @@ pipeline {
                     }
                 }
             }
-        
+        }
         stage('Destroy') {
             when {
                 expression {
                     JOB_NAME == "build-eks-environment" && params.Destroy == true
                 }
             }
+            steps {
+                script {
+                    maskPasswords() {
+                        sh (
+                            script: 'docker run --rm' + common_envs + ' \
+                                -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                                -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                                -w /apps/eks-environments/${Env} \
+                                devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
+                                terragrunt destroy ' + tf_targets + '-auto-approve -no-color' + common_tg_cli_args,
+                            returnStatus: true
+                        )
+                    }
+                }
+            }
+        }
+        stage('Post Actions') {
+            steps {
+                script {
+                    if (currentBuild.result == 'FAILURE') {
+                        echo "Pipeline failed. Sending notification..."
+                        // Add notification logic here (e.g., email, Slack)
+                    } else {
+                        echo "Pipeline completed successfully."
+                    }
+                }
+            }
+        }
     }
 }
