@@ -1,4 +1,4 @@
-*/*def aws_accounts_id_mapping = [
+def aws_accounts_id_mapping = [
     "dev": "283819745154",
     "devops-sandbox": "283819745154",
     "staging": "768619733044",
@@ -24,14 +24,13 @@ def common_envs = ' -e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}'
 def common_tg_cli_args = " --iam-assume-role arn:aws:iam::${aws_account_id}:role/terraform --backend-bootstrap"
 
 
-*/
 
 pipeline {
     agent any
     environment {
-        CLOUDFLARE_API_TOKEN = credentials("${cloudflare_zone}-cloudflare-token")
-        TF_VERSION = "1.12.2"
-        TG_VERSION = "0.83.0"
+           AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_REGION = 'us-east-2'
     }
     stages {
         stage('Init') {
@@ -82,68 +81,6 @@ pipeline {
                         currentBuild.result = 'FAILURE'
                         error("Error in running terraform plan. Terminating the pipeline.")
                     }
-                }
-            }
-        }
-        stage('Execute') {
-            when {
-                expression {
-                    JOB_NAME == "build-eks-environment" && params.Action == "apply" && planExitCode == 2
-                }
-            }
-            steps {
-                script {
-                    input message: "Apply Changes?", submitter: "amit@spekit.co, arajwani, ankit@spekit.co, akalsariya, dipal@spekit.co, dparmar, hemant@spekit.co, hrao, nirav@spekit.co, nkatarmal, jay.kothari@spekit.co, jkothari"
-                    def apply_flags
-                    if (params.Destroy == true) {
-                        def userCause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
-                        def buildUser = userCause[0].userId
-                        def approvalUser = input message: "Are you sure you want to destroy the ${params.Env} infrastructure? SHOULD NOT BE APPROVED BY PIPELINE STARTER", submitter: "amit@spekit.co, arajwani, ankit@spekit.co, akalsariya, dipal@spekit.co, dparmar, hemant@spekit.co, hrao, nirav@spekit.co, nkatarmal, jay.kothari@spekit.co, jkothari", submitterParameter: "approver"
-                        while (buildUser == approvalUser && params.Env != "dev" && params.Env != "staging-failover") {
-                            echo 'Pipeline starter should not approve this.'
-                            approvalUser = input message: "Are you sure you want to destroy the ${params.Env} infrastructure? SHOULD NOT BE APPROVED BY PIPELINE STARTER", submitter: "amit@spekit.co, arajwani, ankit@spekit.co, akalsariya, dipal@spekit.co, dparmar, hemant@spekit.co, hrao, nirav@spekit.co, nkatarmal, jay.kothari@spekit.co, jkothari", submitterParameter: "approver"
-                        }
-                        apply_flags = '-destroy'
-                    } else {
-                        apply_flags = 'tfplan'
-                    }
-                    maskPasswords() {
-                        sh 'docker run --rm' + common_envs + ' \
-                            -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                            -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
-                            -w /apps/eks-environments/${Env} \
-                            devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                            terragrunt apply -no-color -auto-approve ' + tf_targets + apply_flags + common_tg_cli_args
-                    }
-                }
-            }
-        }
-        stage('Run Terragrunt Custom Command') {
-            when {
-                expression {
-                    JOB_NAME == "run-custom-terragrunt-command"
-                }
-            }
-            steps {
-                script {
-                    def cmd = "terragrunt " + params.Command.replace("terragrunt", "").trim()
-                    input message: "Are you sure you want to run this command on ${params.Env} environment from ${params.Branch} branch: ${cmd}?", submitter: "amit@spekit.co, arajwani, ankit@spekit.co, akalsariya, dipal@spekit.co, dparmar, hemant@spekit.co, hrao, nirav@spekit.co, nkatarmal, jay.kothari@spekit.co, jkothari"
-                    maskPasswords() {
-                        sh 'docker run --rm' + common_envs + ' \
-                            -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                            -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
-                            -w /apps/eks-environments/${Env} \
-                            devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} ' + cmd + common_tg_cli_args
-                    }
-                }
-            }
-        }
-    }
-    post {
-        always {
-            script {
-                stage('Cleanup') {
-                    sh 'sudo chown -R jenkins:jenkins $(pwd)'
                 }
             }
         }
