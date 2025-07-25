@@ -1,4 +1,3 @@
-
 def aws_accounts_id_mapping = [
     "dev": "283819745154",
     "devops-sandbox": "283819745154",
@@ -32,65 +31,28 @@ pipeline {
         AWS_REGION = 'us-east-2'
     }
     stages {
-        stage('Init') {
-            steps {
-                echo "Initializing pipeline..."
-            }
-        }
         stage('Plan') {
             steps {
-                script {
-                    maskPasswords() {
-                        planExitCode = sh (
-                            script: "docker run --rm${common_envs} \
-                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
-                                -w /apps/eks-environments/${Env} \
-                                devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt plan ${tf_targets}-out=tfplan -no-color -detailed-exitcode${common_tg_cli_args}",
-                            returnStatus: true
-                        )
-                    }
-                }
+                sh """
+                    docker run --rm${common_envs} \
+                    -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                    -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                    -w /apps/eks-environments/${Env} \
+                    devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
+                    terragrunt plan ${tf_targets}-out=tfplan -no-color -detailed-exitcode${common_tg_cli_args}
+                """
             }
         }
         stage('Apply') {
             steps {
-                script {
-                    maskPasswords() {
-                        sh (
-                            script: "docker run --rm${common_envs} \
-                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
-                                -w /apps/eks-environments/${Env} \
-                                devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt apply ${tf_targets}-auto-approve -no-color${common_tg_cli_args}",
-                            returnStatus: true
-                        )
-                    }
-                }
-            }
-        }
-        stage('Destroy') {
-            steps {
-                script {
-                    maskPasswords() {
-                        sh (
-                            script: "docker run --rm${common_envs} \
-                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
-                                -w /apps/eks-environments/${Env} \
-                                devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt destroy ${tf_targets}-auto-approve -no-color${common_tg_cli_args}",
-                            returnStatus: true
-                        )
-                    }
-                }
-            }
-        }
-        stage('Post Actions') {
-            steps {
-                echo "Pipeline completed."
+                sh """
+                    docker run --rm${common_envs} \
+                    -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                    -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                    -w /apps/eks-environments/${Env} \
+                    devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
+                    terragrunt apply ${tf_targets}-auto-approve -no-color${common_tg_cli_args}
+                """
             }
         }
     }
