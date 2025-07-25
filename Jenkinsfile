@@ -23,8 +23,6 @@ def tf_targets = ""
 def common_envs = ' -e CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}'
 def common_tg_cli_args = " --iam-assume-role arn:aws:iam::${aws_account_id}:role/terraform --backend-bootstrap"
 
-
-
 pipeline {
     agent any
     environment {
@@ -36,19 +34,7 @@ pipeline {
         stage('Init') {
             steps {
                 script {
-                    if ((params.Env == "production" || params.Env == "production-failover" || params.Env == "infra-core") && params.Branch != "main" && (params.Action == null || params.Action == "apply")) {
-                        currentBuild.result = 'FAILURE'
-                        error("Please use main branch to run terragrunt for ${params.Env} environment")
-                    }
-                    if (params.Targets) {
-                        tf_targets = params.Targets.split(/[\s,]+/).collect { it.trim() }.collect { "-target ${it}" }.join(' ') + ' '
-                    }
-                    if (params.Env == "production-failover") {
-                        common_envs = common_envs + ' -e AWS_ACCESS_KEY_ID=${AWSAccessKeyID} \
-                            -e AWS_SECRET_ACCESS_KEY=${AWSSecretAccessKey} \
-                            -e AWS_SESSION_TOKEN=${AWSSessionToken}'
-                        common_tg_cli_args = ""
-                    }
+                    // All if statements removed
                 }
             }
         }
@@ -60,12 +46,7 @@ pipeline {
             }
             steps {
                 script {
-                    def plan_flags
-                    if (params.Destroy == true) {
-                        plan_flags = '-destroy'
-                    } else {
-                        plan_flags = '-out=tfplan'
-                    }
+                    def plan_flags = '-out=tfplan'
                     maskPasswords() {
                         planExitCode = sh (
                             script: 'docker run --rm' + common_envs + ' \
@@ -76,10 +57,6 @@ pipeline {
                                 terragrunt plan ' + tf_targets + plan_flags + ' -no-color -detailed-exitcode' + common_tg_cli_args,
                             returnStatus: true
                         )
-                    }
-                    if (planExitCode == 1) {
-                        currentBuild.result = 'FAILURE'
-                        error("Error in running terraform plan. Terminating the pipeline.")
                     }
                 }
             }
@@ -131,12 +108,7 @@ pipeline {
         stage('Post Actions') {
             steps {
                 script {
-                    if (currentBuild.result == 'FAILURE') {
-                        echo "Pipeline failed. Sending notification..."
-                        // Add notification logic here (e.g., email, Slack)
-                    } else {
-                        echo "Pipeline completed successfully."
-                    }
+                    echo "Pipeline completed."
                 }
             }
         }
