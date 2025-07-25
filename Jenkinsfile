@@ -1,3 +1,4 @@
+
 def aws_accounts_id_mapping = [
     "dev": "283819745154",
     "devops-sandbox": "283819745154",
@@ -33,28 +34,20 @@ pipeline {
     stages {
         stage('Init') {
             steps {
-                script {
-                    // All if statements removed
-                }
+                echo "Initializing pipeline..."
             }
         }
         stage('Plan') {
-            when {
-                expression {
-                    JOB_NAME == "build-eks-environment"
-                }
-            }
             steps {
                 script {
-                    def plan_flags = '-out=tfplan'
                     maskPasswords() {
                         planExitCode = sh (
-                            script: 'docker run --rm' + common_envs + ' \
-                                -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                            script: "docker run --rm${common_envs} \
+                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
                                 -w /apps/eks-environments/${Env} \
                                 devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt plan ' + tf_targets + plan_flags + ' -no-color -detailed-exitcode' + common_tg_cli_args,
+                                terragrunt plan ${tf_targets}-out=tfplan -no-color -detailed-exitcode${common_tg_cli_args}",
                             returnStatus: true
                         )
                     }
@@ -62,21 +55,16 @@ pipeline {
             }
         }
         stage('Apply') {
-            when {
-                expression {
-                    JOB_NAME == "build-eks-environment" && (params.Action == null || params.Action == "apply")
-                }
-            }
             steps {
                 script {
                     maskPasswords() {
                         sh (
-                            script: 'docker run --rm' + common_envs + ' \
-                                -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                            script: "docker run --rm${common_envs} \
+                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
                                 -w /apps/eks-environments/${Env} \
                                 devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt apply ' + tf_targets + '-auto-approve -no-color' + common_tg_cli_args,
+                                terragrunt apply ${tf_targets}-auto-approve -no-color${common_tg_cli_args}",
                             returnStatus: true
                         )
                     }
@@ -84,21 +72,16 @@ pipeline {
             }
         }
         stage('Destroy') {
-            when {
-                expression {
-                    JOB_NAME == "build-eks-environment" && params.Destroy == true
-                }
-            }
             steps {
                 script {
                     maskPasswords() {
                         sh (
-                            script: 'docker run --rm' + common_envs + ' \
-                                -v $(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
-                                -v $(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
+                            script: "docker run --rm${common_envs} \
+                                -v \$(pwd)/terraform/eks-environments/${Env}:/apps/eks-environments/${Env} \
+                                -v \$(pwd)/terraform/modules/mod-ekscluster:/apps/modules/mod-ekscluster \
                                 -w /apps/eks-environments/${Env} \
                                 devopsinfra/docker-terragrunt:aws-tf-${TF_VERSION}-tg-${TG_VERSION} \
-                                terragrunt destroy ' + tf_targets + '-auto-approve -no-color' + common_tg_cli_args,
+                                terragrunt destroy ${tf_targets}-auto-approve -no-color${common_tg_cli_args}",
                             returnStatus: true
                         )
                     }
@@ -107,9 +90,7 @@ pipeline {
         }
         stage('Post Actions') {
             steps {
-                script {
-                    echo "Pipeline completed."
-                }
+                echo "Pipeline completed."
             }
         }
     }
