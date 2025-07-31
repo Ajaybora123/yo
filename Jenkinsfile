@@ -17,25 +17,24 @@ pipeline {
 
         stage('Terraform Init') {
             
-                {
+                
                     sh 'terraform init'
-                }
+            
             
         }
 
         stage('Terraform Plan') {
             
-                 {
                     sh 'terraform plan -out=tfplan'
-                }
+                
             
         }
 
         stage('Terraform Apply') {
           
-                {
+                
                     sh 'terraform apply -auto-approve tfplan'
-                }
+                
             
         }
     }
