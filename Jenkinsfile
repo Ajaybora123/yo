@@ -2,13 +2,12 @@ pipeline {
     agent any
 
     environment {
-        TF_DIR = 'terraform' // change if your Terraform code is in a different directory
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git url: '', branch: 'main'
+                git url: 'https://github.com/Ajaybora123/yo.git', branch: 'main'
             }
         }
 
