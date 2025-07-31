@@ -13,7 +13,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir("${env.TF_DIR}") {
+                {
                     sh 'terraform init'
                 }
             }
@@ -21,7 +21,7 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                dir("${env.TF_DIR}") {
+                 {
                     sh 'terraform plan -out=tfplan'
                 }
             }
@@ -29,7 +29,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                dir("${env.TF_DIR}") {
+                {
                     sh 'terraform apply -auto-approve tfplan'
                 }
             }
