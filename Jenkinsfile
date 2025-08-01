@@ -1,47 +1,44 @@
 pipeline {
     agent any
 
-    
     stages {
         stage('Checkout Code') {
             steps {
                 git 'https://github.com/Ajaybora123/yo.git'
             }
         }
-    }
 
         stage('Terraform Init') {
             steps {
-              withCredentials([
+                withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ])
-            {
-                sh 'terraform init'
+                ]) {
+                    sh 'terraform init'
+                }
             }
-        }
         }
 
         stage('Terraform Plan') {
-            steps{
-              withCredentials([
+            steps {
+                withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]){
-                sh 'terraform plan -out=tfplan'
+                ]) {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
-        }
         }
 
         stage('Terraform Apply') {
             steps {
-                  withCredentials([
+                withCredentials([
                     string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ])
-                {
-                input message: "Do you want to apply the changes?"
-                sh 'terraform apply tfplan'
+                ]) {
+                    input message: "Do you want to apply the changes?"
+                    sh 'terraform apply tfplan'
+                }
             }
         }
     }
