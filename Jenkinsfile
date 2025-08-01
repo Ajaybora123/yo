@@ -8,6 +8,7 @@ pipeline {
                 git 'https://github.com/Ajaybora123/yo.git'
             }
         }
+    }
 
         stage('Terraform Init') {
             steps {
