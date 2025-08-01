@@ -29,7 +29,39 @@ pipeline {
                 sh 'terraform show -no-color tfplan > tfplan.txt'
             }
         }
-      tage('Terraform Apply') {
+        stage('Terraform Apply') {
+            when {
+                expression { params.action == 'apply' }
+            }
+            steps {
+                script {
+                    if (!params.autoApprove) {
+                        def plan = readFile 'tfplan.txt'
+                        input message: "Do you want to apply the plan?",
+                        parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
+                    }
+                    sh 'terraform apply -input=false tfplan'
+                }
+            }
+        }
+        stage('Terraform Destroy') {
+            when {
+                expression { params.action == 'destroy' }
+            }
+            steps {
+                script {
+                    sh 'terraform destroy --auto-approve'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+        }
+    }
+}      stage('Terraform Apply') {
     steps {
         script {
             if (!params.autoApprove) {
@@ -42,13 +74,3 @@ pipeline {
     }
 }
 
-stage('Terraform Destroy') {
-    steps {
-        script {
-            sh 'terraform destroy --auto-approve'
-        }
-    }
-}
-    }
-
-}
