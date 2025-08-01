@@ -61,16 +61,4 @@ pipeline {
             echo 'Cleaning up...'
         }
     }
-}      stage('Terraform Apply') {
-    steps {
-        script {
-            if (!params.autoApprove) {
-                def plan = readFile 'tfplan.txt'
-                input message: "Do you want to apply the plan?",
-                parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-            }
-            sh 'terraform apply -input=false tfplan'
-        }
-    }
 }
-
